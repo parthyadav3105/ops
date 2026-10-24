@@ -29,9 +29,20 @@ sudo mkdir -p /etc/containerd
 containerd config default | sudo tee /etc/containerd/config.toml
 fi
 
-# Set Cgroup to systemd
+# Kubernetes settings as a drop-in (config.toml imports conf.d/*.toml):
+# - systemd cgroup driver, matching kubelet
+# - local image pull, so CRI pulls read registry mirrors from certs.d
 
-sudo sed -i '/\[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options\]/,/^\[/ s/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml;
+sudo mkdir -p /etc/containerd/conf.d
+cat <<'EOF' | sudo tee /etc/containerd/conf.d/10-k8s.toml
+version = 3
+
+[plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runc.options]
+  SystemdCgroup = true
+
+[plugins.'io.containerd.cri.v1.images']
+  use_local_image_pull = true
+EOF
 sudo systemctl restart containerd;
 containerd --version;
 
@@ -143,4 +154,13 @@ cmd "kubectl annotate sc local-path storageclass.kubernetes.io/is-default-class=
 echo ""
 echo "# Finally, remove the control-plane taint if you want to schedule pods on master:"
 cmd 'kubectl taint node $(kubectl get nodes -o name) node-role.kubernetes.io/control-plane:NoSchedule-'
+
+if curl -fsSL --max-time 30 -o containerd-registry.sh https://raw.githubusercontent.com/parthyadav3105/ops/refs/heads/main/containerd-registry.sh; then
+chmod +x containerd-registry.sh
+echo ""
+echo "# Optional: set up a registry mirror or credentials with ./containerd-registry.sh (-h for help):"
+echo "#   ./containerd-registry.sh docker.io --mirror harbor.example.com/dockerhub-proxy -u myuser"
+echo "#   ./containerd-registry.sh harbor.example.com -u myuser"
+fi
+echo ""
 
