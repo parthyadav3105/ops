@@ -26,7 +26,7 @@ sudo apt-get update -qq;
 sudo apt-get install -y -qq containerd;
 if [ ! -f /etc/containerd/config.toml ]; then
 sudo mkdir -p /etc/containerd
-containerd config default | sudo tee /etc/containerd/config.toml
+containerd config default | sudo tee /etc/containerd/config.toml >/dev/null
 fi
 
 # Kubernetes settings as a drop-in (config.toml imports conf.d/*.toml):
@@ -34,7 +34,7 @@ fi
 # - local image pull, so CRI pulls read registry mirrors from certs.d
 
 sudo mkdir -p /etc/containerd/conf.d
-cat <<'EOF' | sudo tee /etc/containerd/conf.d/10-k8s.toml
+cat <<'EOF' | sudo tee /etc/containerd/conf.d/10-k8s.toml >/dev/null
 version = 3
 
 [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runc.options]
